@@ -1,0 +1,20 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.tfstate
+.terraform.tfstate.*
+*.tfvars
+*.tfvars.json
+
+# Terraform crash logs
+crash.log
+crash.*.log
+
+# Local environment files
+.env
+.env.*
+
+# OS/editor files
+.DS_Store
+.vscode/
