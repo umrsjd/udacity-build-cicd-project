@@ -115,7 +115,19 @@ jobs:
       - name: Get backend LoadBalancer URL
         id: backend-url
         run: |
-          BACKEND_URL=$(kubectl get service backend -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          echo "Waiting for backend LoadBalancer hostname..."
+
+          for i in {1..30}; do
+            BACKEND_URL=$(kubectl get service backend -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+
+            if [ -n "$BACKEND_URL" ]; then
+              break
+            fi
+
+            echo "Backend LoadBalancer is still pending..."
+            sleep 10
+          done
+
           if [ -z "$BACKEND_URL" ]; then
             echo "Backend LoadBalancer URL is not available."
             exit 1
@@ -209,3 +221,37 @@ jobs:
       - name: Wait for frontend rollout
         run: |
           kubectl rollout status deployment/frontend --timeout=180s
+
+      - name: Verify frontend service
+        run: |
+          echo "Waiting for frontend LoadBalancer hostname..."
+
+          for i in {1..30}; do
+            FRONTEND_URL=$(kubectl get service frontend -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+
+            if [ -n "$FRONTEND_URL" ]; then
+              break
+            fi
+
+            echo "Frontend LoadBalancer is still pending..."
+            sleep 10
+          done
+
+          if [ -z "$FRONTEND_URL" ]; then
+            echo "Frontend LoadBalancer hostname was not assigned."
+            exit 1
+          fi
+
+          echo "Frontend Service URL:"
+          echo "http://${FRONTEND_URL}"
+
+          echo "Testing frontend..."
+
+          curl --fail \
+            --retry 10 \
+            --retry-delay 5 \
+            --retry-connrefused \
+            "http://${FRONTEND_URL}"
+
+          echo
+          echo "Frontend service verification successful."
